@@ -61,7 +61,7 @@ The ChatGPT subscription and OpenAI API billing are separate. An API key and API
 ## Quick start
 
 ```bash
-git clone https://github.com/kuensom/personal-executive-ai.git
+git clone https://github.com/kuensom/personal-executive-ai-public.git
 cd personal-executive-ai
 
 python3.11 -m venv .venv
