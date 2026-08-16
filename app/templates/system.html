@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+System | Personal Executive AI
+{% endblock %}
+
+
+{% block nav_system %}
+active
+{% endblock %}
+
+
+{% block page_title %}
+System Status
+{% endblock %}
+
+
+{% block page_description %}
+Operational health and latest execution status
+{% endblock %}
+
+
+{% block content %}
+
+<section class="section">
+
+    <div class="grid grid-3">
+
+        {% with
+            label="System",
+            value=overview.status | upper,
+            description="API and dashboard health"
+        %}
+            {% include "components/metric_card.html" %}
+        {% endwith %}
+
+
+        {% with
+            label="Last run",
+            value=overview.last_run.status | upper
+                if overview.last_run
+                else "UNKNOWN",
+            description="Latest agent execution"
+        %}
+            {% include "components/metric_card.html" %}
+        {% endwith %}
+
+
+        {% with
+            label="History",
+            value=overview.history_count,
+            description="Stored analysis runs"
+        %}
+            {% include "components/metric_card.html" %}
+        {% endwith %}
+
+    </div>
+
+</section>
+
+
+{% if overview.last_run %}
+
+<section class="section">
+
+    <div class="section-heading">
+
+        <h2 class="section-title">
+            Latest execution
+        </h2>
+
+    </div>
+
+    <div class="card">
+
+        <p>
+            <strong>Status:</strong>
+            {{ overview.last_run.status }}
+        </p>
+
+        <p>
+            <strong>Timestamp:</strong>
+            {{ overview.last_run.timestamp }}
+        </p>
+
+        <p>
+            <strong>Execution time:</strong>
+            {{ overview.last_run.execution_seconds or 0 }} seconds
+        </p>
+
+        {% if overview.last_run.error %}
+
+            <p class="status-danger">
+                {{ overview.last_run.error }}
+            </p>
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+{% endif %}
+
+{% endblock %}

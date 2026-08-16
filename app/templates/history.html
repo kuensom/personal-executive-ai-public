@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+History | Personal Executive AI
+{% endblock %}
+
+
+{% block nav_history %}
+active
+{% endblock %}
+
+
+{% block page_title %}
+Execution History
+{% endblock %}
+
+
+{% block page_description %}
+Previous Personal Executive AI analysis runs
+{% endblock %}
+
+
+{% block content %}
+
+<section class="section">
+
+    <div class="card">
+
+        {% if history %}
+
+            <div class="history-list">
+
+                {% for run in history %}
+
+                    <div class="history-item">
+
+                        <a
+                            href="/history/{{ run.timestamp }}"
+                            class="history-link"
+                        >
+                            <strong>
+                                {{ run.timestamp }}
+                            </strong>
+                        </a>
+
+                        <div class="muted">
+
+                            {% if run.briefing_file %}
+                                Analysis + briefing
+                            {% else %}
+                                Analysis only
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            {% with
+                message="No execution history is available yet."
+            %}
+                {% include "components/empty_state.html" %}
+            {% endwith %}
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+{% endblock %}

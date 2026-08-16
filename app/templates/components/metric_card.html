@@ -1,0 +1,17 @@
+<div class="card">
+
+    <div class="metric-label">
+        {{ label }}
+    </div>
+
+    <div class="metric-value {{ value_class | default('') }}">
+        {{ value }}
+    </div>
+
+    {% if description %}
+        <div class="metric-description muted">
+            {{ description }}
+        </div>
+    {% endif %}
+
+</div>

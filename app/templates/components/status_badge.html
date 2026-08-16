@@ -1,0 +1,14 @@
+<span
+    class="
+        status-badge
+        {% if status in ['success', 'ok', 'low'] %}
+            status-success
+        {% elif status in ['warning', 'medium'] %}
+            status-warning
+        {% else %}
+            status-danger
+        {% endif %}
+    "
+>
+    {{ status | upper }}
+</span>

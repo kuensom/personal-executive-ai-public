@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+History Detail | Personal Executive AI
+{% endblock %}
+
+
+{% block nav_history %}
+active
+{% endblock %}
+
+
+{% block page_title %}
+Historical Run
+{% endblock %}
+
+
+{% block page_description %}
+Analysis and briefing for {{ history.run_id }}
+{% endblock %}
+
+
+{% block content %}
+
+<section class="section">
+
+    <div class="section-heading">
+
+        <h2 class="section-title">
+            Run information
+        </h2>
+
+        <a
+            href="/history"
+            class="section-link"
+        >
+            ← Back to history
+        </a>
+
+    </div>
+
+
+    <div class="card">
+
+        <strong>
+            {{ history.run_id }}
+        </strong>
+
+    </div>
+
+</section>
+
+
+<section class="section">
+
+    <div class="section-heading">
+
+        <h2 class="section-title">
+            Immediate priorities
+        </h2>
+
+    </div>
+
+    <div class="card">
+
+        {% if
+            history.analysis
+            and history.analysis.immediate_priorities
+        %}
+
+            <ol class="priority-list">
+
+                {% for item in
+                    history.analysis.immediate_priorities
+                %}
+
+                    <li>
+                        {{ item }}
+                    </li>
+
+                {% endfor %}
+
+            </ol>
+
+        {% else %}
+
+            {% with
+                message="No priorities were recorded for this run."
+            %}
+                {% include "components/empty_state.html" %}
+            {% endwith %}
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+
+<section class="section">
+
+    <div class="grid grid-2">
+
+        <div>
+
+            <div class="section-heading">
+
+                <h2 class="section-title">
+                    Calendar observations
+                </h2>
+
+            </div>
+
+            <div class="card">
+
+                {% if
+                    history.analysis
+                    and history.analysis.calendar_observations
+                %}
+
+                    <ul class="observation-list">
+
+                        {% for observation in
+                            history.analysis.calendar_observations
+                        %}
+
+                            <li>
+                                {{ observation.message }}
+                            </li>
+
+                        {% endfor %}
+
+                    </ul>
+
+                {% else %}
+
+                    {% with
+                        message="No calendar observations recorded."
+                    %}
+                        {% include "components/empty_state.html" %}
+                    {% endwith %}
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+
+        <div>
+
+            <div class="section-heading">
+
+                <h2 class="section-title">
+                    Suggested next actions
+                </h2>
+
+            </div>
+
+            <div class="card">
+
+                {% if
+                    history.analysis
+                    and history.analysis.suggested_next_actions
+                %}
+
+                    <ol class="action-list">
+
+                        {% for action in
+                            history.analysis.suggested_next_actions
+                        %}
+
+                            <li>
+                                {{ action }}
+                            </li>
+
+                        {% endfor %}
+
+                    </ol>
+
+                {% else %}
+
+                    {% with
+                        message="No suggested actions recorded."
+                    %}
+                        {% include "components/empty_state.html" %}
+                    {% endwith %}
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="section">
+
+    <div class="section-heading">
+
+        <h2 class="section-title">
+            Executive briefing
+        </h2>
+
+    </div>
+
+    <div class="card briefing-card">
+
+        {% if history.briefing %}
+
+            <pre class="briefing-text">
+{{ history.briefing }}
+            </pre>
+
+        {% else %}
+
+            {% with
+                message="No briefing was stored for this run."
+            %}
+                {% include "components/empty_state.html" %}
+            {% endwith %}
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+{% endblock %}

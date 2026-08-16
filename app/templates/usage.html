@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+Usage | Personal Executive AI
+{% endblock %}
+
+
+{% block nav_usage %}
+active
+{% endblock %}
+
+
+{% block page_title %}
+AI Usage
+{% endblock %}
+
+
+{% block page_description %}
+Latest model and token consumption
+{% endblock %}
+
+
+{% block content %}
+
+<section class="section">
+
+    {% if usage %}
+
+        <div class="grid grid-4">
+
+            {% with
+                label="Model",
+                value=usage.model or "—",
+                description="Active model",
+                value_class="metric-small"
+            %}
+                {% include "components/metric_card.html" %}
+            {% endwith %}
+
+
+            {% with
+                label="Input tokens",
+                value=usage.input_tokens or 0,
+                description="Tokens sent to model"
+            %}
+                {% include "components/metric_card.html" %}
+            {% endwith %}
+
+
+            {% with
+                label="Output tokens",
+                value=usage.output_tokens or 0,
+                description="Tokens generated"
+            %}
+                {% include "components/metric_card.html" %}
+            {% endwith %}
+
+
+            {% with
+                label="Total tokens",
+                value=usage.total_tokens or 0,
+                description="Total request usage"
+            %}
+                {% include "components/metric_card.html" %}
+            {% endwith %}
+
+        </div>
+
+    {% else %}
+
+        <div class="card">
+
+            {% with
+                message="No OpenAI usage information is available."
+            %}
+                {% include "components/empty_state.html" %}
+            {% endwith %}
+
+        </div>
+
+    {% endif %}
+
+</section>
+
+{% endblock %}

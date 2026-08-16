@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        {% block title %}
+        Personal Executive AI
+        {% endblock %}
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', path='css/dashboard.css') }}"
+    >
+
+    {% block head %}
+    {% endblock %}
+</head>
+
+<body>
+
+<div class="app-shell">
+
+    <!-- ======================
+         SIDEBAR
+    ======================= -->
+
+    <aside class="sidebar">
+
+        <div class="brand">
+
+            <div class="brand-mark">
+                PE
+            </div>
+
+            <div class="brand-copy">
+
+                <div class="brand-title">
+                    Personal Executive AI
+                </div>
+
+                <div class="brand-subtitle">
+                    Executive intelligence
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <nav class="navigation">
+
+            <a
+                href="/"
+                class="nav-item
+                {% block nav_dashboard %}{% endblock %}"
+            >
+                <span class="nav-icon">⌂</span>
+                <span>Dashboard</span>
+            </a>
+
+
+            <a
+                href="/briefing"
+                class="nav-item
+                {% block nav_briefing %}{% endblock %}"
+            >
+                <span class="nav-icon">☰</span>
+                <span>Briefing</span>
+            </a>
+
+
+            <a
+                href="/history"
+                class="nav-item
+                {% block nav_history %}{% endblock %}"
+            >
+                <span class="nav-icon">◷</span>
+                <span>History</span>
+            </a>
+
+
+            <a
+                href="/usage"
+                class="nav-item
+                {% block nav_usage %}{% endblock %}"
+            >
+                <span class="nav-icon">◫</span>
+                <span>Usage</span>
+            </a>
+
+
+            <a
+                href="/system"
+                class="nav-item
+                {% block nav_system %}{% endblock %}"
+            >
+                <span class="nav-icon">⚙</span>
+                <span>System</span>
+            </a>
+
+        </nav>
+
+
+        <div class="sidebar-footer">
+
+            <div class="mode-indicator">
+                <span class="mode-dot"></span>
+
+                <span>
+                    Read-only mode
+                </span>
+            </div>
+
+        </div>
+
+    </aside>
+
+
+    <!-- ======================
+         MAIN AREA
+    ======================= -->
+
+    <div class="main-shell">
+
+        <header class="topbar">
+
+            <div>
+
+                <h1 class="page-title">
+                    {% block page_title %}
+                    Dashboard
+                    {% endblock %}
+                </h1>
+
+                <p class="page-description">
+                    {% block page_description %}
+                    Personal executive intelligence
+                    {% endblock %}
+                </p>
+
+            </div>
+
+
+            <div class="topbar-actions">
+                {% block topbar_actions %}
+                {% endblock %}
+            </div>
+
+        </header>
+
+
+        <main class="content">
+
+            {% block content %}
+            {% endblock %}
+
+        </main>
+
+
+        <footer class="footer">
+
+            <span>
+                Personal Executive AI Assistant
+            </span>
+
+            <span>
+                Local secure environment
+            </span>
+
+        </footer>
+
+    </div>
+
+</div>
+
+
+<script
+    src="{{ url_for('static', path='js/dashboard.js') }}"
+    defer
+></script>
+
+{% block scripts %}
+{% endblock %}
+
+</body>
+
+</html>

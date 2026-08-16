@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+Briefing | Personal Executive AI
+{% endblock %}
+
+
+{% block nav_briefing %}
+active
+{% endblock %}
+
+
+{% block page_title %}
+Executive Briefing
+{% endblock %}
+
+
+{% block page_description %}
+Your latest AI-generated executive briefing
+{% endblock %}
+
+
+{% block content %}
+
+<section class="section">
+
+    <div class="section-heading">
+
+        <h2 class="section-title">
+            Latest briefing
+        </h2>
+
+    </div>
+
+
+    <div class="card briefing-card">
+
+        {% if briefing %}
+
+            <pre class="briefing-text">
+{{ briefing }}
+            </pre>
+
+        {% else %}
+
+            {% with
+                message="No executive briefing is currently available."
+            %}
+
+                {% include "components/empty_state.html" %}
+
+            {% endwith %}
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+{% endblock %}

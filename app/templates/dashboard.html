@@ -1,0 +1,450 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+Executive Dashboard | Personal Executive AI
+{% endblock %}
+
+
+{% block nav_dashboard %}
+active
+{% endblock %}
+
+
+{% block page_title %}
+Executive Dashboard
+{% endblock %}
+
+
+{% block page_description %}
+Your latest priorities, insights and agent status
+{% endblock %}
+
+
+{% block content %}
+
+<!-- =========================
+     SUMMARY METRICS
+========================= -->
+
+<section class="section">
+
+    <div class="grid grid-4">
+
+        {% with
+            label="System",
+            value=dashboard.system_status | upper,
+            description="Current application state"
+        %}
+            {% include "components/metric_card.html" %}
+        {% endwith %}
+
+
+        {% with
+            label="Last run",
+            value=dashboard.last_run.status | upper
+                if dashboard.last_run
+                else "UNKNOWN",
+            description="Latest agent execution"
+        %}
+            {% include "components/metric_card.html" %}
+        {% endwith %}
+
+
+        {% with
+            label="Model",
+            value=dashboard.usage.model
+                if dashboard.usage
+                else "—",
+            description="Active OpenAI model",
+            value_class="metric-small"
+        %}
+            {% include "components/metric_card.html" %}
+        {% endwith %}
+
+
+        {% with
+            label="Total tokens",
+            value=dashboard.usage.total_tokens
+                if dashboard.usage
+                and dashboard.usage.total_tokens
+                else 0,
+            description="Latest AI request usage"
+        %}
+            {% include "components/metric_card.html" %}
+        {% endwith %}
+
+    </div>
+
+</section>
+
+
+<!-- =========================
+     IMMEDIATE PRIORITIES
+========================= -->
+
+<section class="section">
+
+    <div class="section-heading">
+
+        <h2 class="section-title">
+            Immediate priorities
+        </h2>
+
+    </div>
+
+
+    <div class="card">
+
+        {% if
+            dashboard.analysis
+            and dashboard.analysis.immediate_priorities
+        %}
+
+            <ol class="priority-list">
+
+                {% for item in
+                    dashboard.analysis.immediate_priorities
+                %}
+
+                    <li>
+                        {{ item }}
+                    </li>
+
+                {% endfor %}
+
+            </ol>
+
+        {% else %}
+
+            {% with
+                message="No immediate priorities identified."
+            %}
+                {% include "components/empty_state.html" %}
+            {% endwith %}
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+
+<!-- =========================
+     EMAILS REQUIRING ATTENTION
+========================= -->
+
+<section class="section">
+
+    <div class="section-heading">
+
+        <h2 class="section-title">
+            Emails requiring attention
+        </h2>
+
+    </div>
+
+
+    <div class="card">
+
+        {% if dashboard.analysis %}
+
+            {% set important_emails =
+                dashboard.analysis.emails
+                | selectattr(
+                    "action_required",
+                    "equalto",
+                    true
+                )
+                | list
+            %}
+
+            {% if important_emails %}
+
+                <div class="email-list">
+
+                    {% for email in important_emails %}
+
+                        <div class="email-item">
+
+                            <div class="email-content">
+
+                                <div class="email-summary">
+                                    {{ email.summary }}
+                                </div>
+
+                                {% if email.suggested_action %}
+
+                                    <div class="muted">
+                                        {{ email.suggested_action }}
+                                    </div>
+
+                                {% endif %}
+
+
+                                {% if email.deadline %}
+
+                                    <div class="email-deadline">
+                                        Deadline:
+                                        {{ email.deadline }}
+                                    </div>
+
+                                {% endif %}
+
+                            </div>
+
+
+                            <div class="email-meta">
+
+                                {% with
+                                    status=email.priority
+                                %}
+                                    {% include "components/status_badge.html" %}
+                                {% endwith %}
+
+                            </div>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% else %}
+
+                {% with
+                    message="No emails currently require attention."
+                %}
+                    {% include "components/empty_state.html" %}
+                {% endwith %}
+
+            {% endif %}
+
+        {% else %}
+
+            {% with
+                message="No email analysis is currently available."
+            %}
+                {% include "components/empty_state.html" %}
+            {% endwith %}
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+
+<!-- =========================
+     CALENDAR + NEXT ACTIONS
+========================= -->
+
+<section class="section">
+
+    <div class="grid grid-2">
+
+        <!-- Calendar observations -->
+
+        <div>
+
+            <div class="section-heading">
+
+                <h2 class="section-title">
+                    Calendar observations
+                </h2>
+
+            </div>
+
+
+            <div class="card">
+
+                {% if
+                    dashboard.analysis
+                    and dashboard.analysis.calendar_observations
+                %}
+
+                    <ul class="observation-list">
+
+                        {% for item in
+                            dashboard.analysis.calendar_observations
+                        %}
+
+                            <li>
+
+                                <div>
+                                    {{ item.message }}
+                                </div>
+
+                                {% if item.confidence is not none %}
+
+                                    <div class="muted">
+                                        Confidence:
+                                        {{ "%.0f"|format(
+                                            item.confidence * 100
+                                        ) }}%
+                                    </div>
+
+                                {% endif %}
+
+                            </li>
+
+                        {% endfor %}
+
+                    </ul>
+
+                {% else %}
+
+                    {% with
+                        message="No significant calendar observations."
+                    %}
+                        {% include "components/empty_state.html" %}
+                    {% endwith %}
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+
+        <!-- Suggested actions -->
+
+        <div>
+
+            <div class="section-heading">
+
+                <h2 class="section-title">
+                    Suggested next actions
+                </h2>
+
+            </div>
+
+
+            <div class="card">
+
+                {% if
+                    dashboard.analysis
+                    and dashboard.analysis.suggested_next_actions
+                %}
+
+                    <ol class="action-list">
+
+                        {% for item in
+                            dashboard.analysis.suggested_next_actions
+                        %}
+
+                            <li>
+                                {{ item }}
+                            </li>
+
+                        {% endfor %}
+
+                    </ol>
+
+                {% else %}
+
+                    {% with
+                        message="No additional actions suggested."
+                    %}
+                        {% include "components/empty_state.html" %}
+                    {% endwith %}
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =========================
+     RECENT RUNS
+========================= -->
+
+<section class="section">
+
+    <div class="section-heading">
+
+        <h2 class="section-title">
+            Recent runs
+        </h2>
+
+        <a
+            href="/history"
+            class="section-link"
+        >
+            View all
+        </a>
+
+    </div>
+
+
+    <div class="card">
+
+        {% if dashboard.recent_history %}
+
+            <div class="history-list">
+
+                {% for run in dashboard.recent_history %}
+
+                    <div class="history-item">
+
+                        <div>
+
+                            <strong>
+                                {{ run.timestamp }}
+                            </strong>
+
+                        </div>
+
+
+                        <div class="muted">
+
+                            {% if
+                                run.analysis_file
+                                and run.briefing_file
+                            %}
+
+                                Analysis + briefing
+
+                            {% elif run.analysis_file %}
+
+                                Analysis only
+
+                            {% elif run.briefing_file %}
+
+                                Briefing only
+
+                            {% else %}
+
+                                No artefacts
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            {% with
+                message="No historical runs are available yet."
+            %}
+                {% include "components/empty_state.html" %}
+            {% endwith %}
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+
+{% endblock %}

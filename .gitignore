@@ -1,0 +1,18 @@
+# Python environment
+.venv/
+
+# Secrets and credentials
+.env
+credentials.json
+token.json
+
+# Python generated files
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Application output
+logs/
+
+# macOS generated files
+.DS_Store
