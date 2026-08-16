@@ -176,4 +176,4 @@ MIT License
 
 ## Disclaimer
 
-This project is provided for learning and experimentation. It is not a substitute for professional administrative, legal, financial, medical, or security advice. Review AI-generated output before acting on it.
+This project is provided for learning and experimentation. It is not a substitute for professional administrative, legal, financial, medical, or security advice. Review generated output before acting on it.
