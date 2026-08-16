@@ -62,7 +62,7 @@ The ChatGPT subscription and OpenAI API billing are separate. An API key and API
 
 ```bash
 git clone https://github.com/kuensom/personal-executive-ai-public.git
-cd personal-executive-ai
+cd personal-executive-ai-public
 
 python3.11 -m venv .venv
 source .venv/bin/activate
@@ -92,9 +92,6 @@ Copy `.env.example` to `.env` and provide your own values:
 ```dotenv
 OPENAI_API_KEY=replace-with-your-own-key
 OPENAI_MODEL=gpt-5.6-luna
-GOOGLE_CREDENTIALS_FILE=credentials.json
-GOOGLE_TOKEN_FILE=token.json
-LOG_DIR=logs
 ```
 
 Never commit real keys, OAuth client secrets, access tokens, email content, calendar data, or generated personal briefings.
@@ -175,7 +172,7 @@ Contributions, bug reports, and documentation improvements are welcome. Read [CO
 
 ## License
 
-No open-source licence should be implied merely because a repository is public. Add an explicit `LICENSE` file before inviting reuse. MIT is a simple permissive choice; Apache-2.0 adds an express patent grant. See [LICENSE-CHOICE.md](LICENSE-CHOICE.md).
+MIT License
 
 ## Disclaimer
 
