@@ -62,11 +62,17 @@ def build_fake_analysis():
 
 
 @patch("app.services.analysis_service.collect_daily_context")
-@patch("app.services.analysis_service.client")
+@patch(
+    "app.services.analysis_service.get_openai_client"
+)
 def test_analyse_daily_context(
-    mock_client,
+    mock_get_openai_client,
     mock_collect_context,
 ):
+    mock_client = MagicMock()
+
+    mock_get_openai_client.return_value = mock_client
+
     mock_collect_context.return_value = build_fake_context()
 
     fake_response = MagicMock()

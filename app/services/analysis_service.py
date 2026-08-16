@@ -1,18 +1,23 @@
 import json
 
-from app.integrations.ai_client import client, MODEL
-from app.services.data_collector import collect_daily_context
-from app.models import DailyAnalysis
-
-from app.logger import get_logger
-
 from datetime import datetime
 from pathlib import Path
 
+from app.config import settings
+from app.integrations.ai_client import (
+    MODEL,
+    get_openai_client,
+)
+from app.logger import get_logger
+from app.models import DailyAnalysis
+from app.services.data_collector import (
+    collect_daily_context,
+)
+
+
 logger = get_logger("ai")
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-LOG_DIR = BASE_DIR / "logs"
+LOG_DIR = settings.log_dir
 USAGE_FILE = LOG_DIR / "latest_usage.json"
 
 
@@ -58,63 +63,151 @@ Rules:
 """
 
 
-def build_context_payload(context):
+def build_context_payload(
+    context: dict,
+) -> dict:
+    """
+    Convert collected domain models into a
+    JSON-serialisable payload for AI analysis.
+    """
+
     return {
         "emails": [
             email.model_dump()
-            for email in context["emails"]
+            for email in context.get(
+                "emails",
+                [],
+            )
         ],
         "calendar": [
             event.model_dump()
-            for event in context["calendar"]
+            for event in context.get(
+                "calendar",
+                [],
+            )
         ],
     }
 
 
+def save_usage(
+    response,
+) -> None:
+    """
+    Persist the latest OpenAI token usage.
+
+    If the response does not contain usage data,
+    nothing is written.
+    """
+
+    if not response.usage:
+        return
+
+    LOG_DIR.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    usage_data = {
+        "model": MODEL,
+        "input_tokens": (
+            response.usage.input_tokens
+        ),
+        "output_tokens": (
+            response.usage.output_tokens
+        ),
+        "total_tokens": (
+            response.usage.total_tokens
+        ),
+    }
+
+    USAGE_FILE.write_text(
+        json.dumps(
+            usage_data,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+
 def analyse_daily_context() -> DailyAnalysis:
+    """
+    Collect current email/calendar context and
+    produce structured AI analysis.
+
+    The OpenAI client is created lazily so that
+    importing this module does not require an API key.
+    """
+
+    logger.info(
+        "Collecting daily context for AI analysis."
+    )
+
     context = collect_daily_context()
 
-    payload = build_context_payload(context)
+    payload = build_context_payload(
+        context
+    )
+
+    client = get_openai_client()
+
+    logger.info(
+        "Submitting daily context for AI analysis."
+    )
 
     response = client.responses.parse(
         model=MODEL,
         instructions=SYSTEM_INSTRUCTIONS,
-        input=json.dumps(payload, indent=2),
+        input=json.dumps(
+            payload,
+            indent=2,
+        ),
         text_format=DailyAnalysis,
     )
 
-    if response.usage:
-        usage_data = {
-            "model": MODEL,
-            "input_tokens": (
-                response.usage.input_tokens
-            ),
-            "output_tokens": (
-                response.usage.output_tokens
-            ),
-            "total_tokens": (
-                response.usage.total_tokens
-            ),
-        }
-
-        USAGE_FILE.write_text(
-            json.dumps(
-                usage_data,
-                indent=2,
-            ),
-            encoding="utf-8",
+    if response.output_parsed is None:
+        raise RuntimeError(
+            "OpenAI returned no structured DailyAnalysis."
         )
 
+    save_usage(
+        response
+    )
+
+    logger.info(
+        "Daily AI analysis completed successfully."
+    )
+
     return response.output_parsed
+
 
 def save_analysis(
     analysis: DailyAnalysis,
     output_dir: Path = LOG_DIR,
     run_id: str | None = None,
 ) -> Path:
-    """Persist structured DailyAnalysis as JSON."""
+    """
+    Persist structured DailyAnalysis as JSON.
 
-    output_dir.mkdir(exist_ok=True)
+    Args:
+        analysis:
+            Structured DailyAnalysis result.
+
+        output_dir:
+            Directory in which the analysis file
+            will be stored.
+
+        run_id:
+            Optional run identifier. If omitted,
+            a timestamp-based ID is generated.
+
+    Returns:
+        Path to the saved analysis file.
+    """
+
+    output_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
     if run_id is None:
         run_id = datetime.now().strftime(
@@ -133,12 +226,24 @@ def save_analysis(
         encoding="utf-8",
     )
 
+    logger.info(
+        "Structured analysis saved: %s",
+        output_file,
+    )
+
     return output_file
 
+
 def main():
+    """
+    Run analysis directly from the command line.
+    """
+
     analysis = analyse_daily_context()
 
-    output_file = save_analysis(analysis)
+    output_file = save_analysis(
+        analysis
+    )
 
     print(
         analysis.model_dump_json(
