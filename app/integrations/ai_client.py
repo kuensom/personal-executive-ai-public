@@ -1,8 +1,9 @@
-import os
-
 from openai import OpenAI
 
 from app.config import settings
+from app.services.secret_service import (
+    get_secret_service,
+)
 
 
 MODEL = settings.openai_model
@@ -12,21 +13,16 @@ def get_openai_client() -> OpenAI:
     """
     Return an authenticated OpenAI client.
 
-    Local development currently reads the API key
-    from the environment.
-
-    Cloud secret retrieval will be introduced through
-    SecretService in Stage 3.0B.
+    Secret retrieval is delegated to SecretService
+    so this integration does not need to know where
+    the API key is stored.
     """
 
-    api_key = os.getenv(
-        "OPENAI_API_KEY"
-    )
+    secret_service = get_secret_service()
 
-    if not api_key:
-        raise RuntimeError(
-            "OPENAI_API_KEY is not configured."
-        )
+    api_key = (
+        secret_service.get_openai_api_key()
+    )
 
     return OpenAI(
         api_key=api_key
