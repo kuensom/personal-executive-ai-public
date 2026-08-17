@@ -1,5 +1,5 @@
 from datetime import datetime
-from pathlib import Path
+
 import json
 import time
 import traceback
@@ -11,74 +11,85 @@ from app.services.analysis_service import (
     analyse_daily_context,
     save_analysis,
 )
+from app.services.briefing_service import (
+    render_morning_briefing,
+)
+from app.services.storage_service import (
+    get_storage_service,
+)
 
-from app.services.briefing_service import render_morning_briefing
-
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-LOG_DIR = BASE_DIR / "logs"
-STATUS_FILE = LOG_DIR / "last_run.json"
 
 logger = get_logger("scheduler")
 
-def write_status(status_data: dict):
+
+def write_status(
+    status_data: dict,
+) -> None:
     """Persist the latest agent execution status."""
-    STATUS_FILE.write_text(
+
+    storage = get_storage_service()
+
+    storage.write_text(
+        "last_run.json",
         json.dumps(
             status_data,
             indent=2,
         ),
-        encoding="utf-8",
     )
 
 
 def run():
-    """Run the scheduled Personal Executive AI briefing workflow."""
+    """
+    Run the Personal Executive AI briefing workflow.
 
-    LOG_DIR.mkdir(exist_ok=True)
+    Persistence is delegated to StorageService so
+    the workflow works with either local filesystem
+    or cloud storage.
+    """
+
+    storage = get_storage_service()
 
     start_time = time.perf_counter()
 
-    logger.info("Morning briefing started")
+    logger.info(
+        "Morning briefing started"
+    )
 
     try:
-        # 1. Generate the briefing
-        #---briefing = render_morning_briefing()
-        # Run AI analysis once
-        analysis = analyse_daily_context()
-
-        # Persist the structured result
-        analysis_file = save_analysis(analysis)
-
-        # Render the human-readable briefing
-        # from the SAME analysis
-        briefing = render_morning_briefing(analysis)
-
-        # 2. Create timestamped output filename
-        timestamp = datetime.now().strftime(
+        # One run ID is shared by analysis and briefing.
+        run_id = datetime.now().strftime(
             "%Y-%m-%d_%H-%M-%S"
         )
 
-        output_file = (
-            LOG_DIR
-            / f"briefing_{timestamp}.txt"
+        # 1. Analyse current Gmail/Calendar context.
+        analysis = analyse_daily_context()
+
+        # 2. Persist structured analysis.
+        analysis_artifact = save_analysis(
+            analysis,
+            run_id=run_id,
         )
 
-        # 3. Persist briefing
-        output_file.write_text(
+        # 3. Render briefing from the SAME analysis.
+        briefing = render_morning_briefing(
+            analysis
+        )
+
+        # 4. Persist human-readable briefing.
+        briefing_artifact = (
+            f"briefing_{run_id}.txt"
+        )
+
+        storage.write_text(
+            briefing_artifact,
             briefing,
-            encoding="utf-8",
         )
 
-        # This is our operational SUCCESS POINT.
-        # The AI workflow has completed and the briefing
-        # has been successfully persisted.
         logger.info(
             "Briefing completed successfully: %s",
-            output_file,
+            briefing_artifact,
         )
 
-        # 4. Measure execution time
         elapsed = (
             time.perf_counter()
             - start_time
@@ -89,29 +100,31 @@ def run():
             elapsed,
         )
 
-        # 5. Record successful run status
+        # 5. Persist operational status.
         status = {
             "status": "success",
             "timestamp": datetime.now().isoformat(),
-            "analysis_file": str(analysis_file),
-            "briefing_file": str(output_file),
+            "analysis_file": analysis_artifact,
+            "briefing_file": briefing_artifact,
             "execution_seconds": round(
                 elapsed,
                 2,
             ),
         }
 
-        write_status(status)
+        write_status(
+            status
+        )
 
-        # 6. Notify the user
+        # 6. Notify user / cloud log.
         notify(
             "Personal Executive AI",
             "Your morning briefing is ready.",
         )
 
-        # 7. Terminal / launchd output
         print(
-            f"Briefing saved to: {output_file}"
+            "Briefing saved to: "
+            f"{briefing_artifact}"
         )
 
     except Exception as exc:
@@ -134,7 +147,6 @@ def run():
             traceback.format_exc()
         )
 
-        # Record failed run
         status = {
             "status": "failed",
             "timestamp": datetime.now().isoformat(),
@@ -145,16 +157,16 @@ def run():
             "error": str(exc),
         }
 
-        write_status(status)
-
-        # Optional failure notification
-        notify(
-            "Personal Executive AI",
-            "Morning briefing failed. Check agent.log.",
+        write_status(
+            status
         )
 
-        # Re-raise so launchd can see that
-        # execution did not complete normally.
+        notify(
+            "Personal Executive AI",
+            "Morning briefing failed. "
+            "Check application logs.",
+        )
+
         raise
 
 

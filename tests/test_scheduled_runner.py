@@ -1,12 +1,10 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from app import scheduled_runner
 from app.models import DailyAnalysis
 
 
 def build_fake_analysis():
-    """Return deterministic fake analysis for scheduler tests."""
-
     return DailyAnalysis(
         immediate_priorities=[],
         emails=[],
@@ -15,118 +13,149 @@ def build_fake_analysis():
     )
 
 
-@patch("app.scheduled_runner.notify")
-@patch("app.scheduled_runner.render_morning_briefing")
-@patch("app.scheduled_runner.save_analysis")
-@patch("app.scheduled_runner.analyse_daily_context")
+@patch(
+    "app.scheduled_runner.notify"
+)
+@patch(
+    "app.scheduled_runner.render_morning_briefing"
+)
+@patch(
+    "app.scheduled_runner.save_analysis"
+)
+@patch(
+    "app.scheduled_runner.analyse_daily_context"
+)
+@patch(
+    "app.scheduled_runner.get_storage_service"
+)
 def test_scheduled_runner_success(
+    mock_get_storage_service,
     mock_analyse,
     mock_save_analysis,
     mock_render,
     mock_notify,
-    tmp_path,
-    monkeypatch,
 ):
     fake_analysis = build_fake_analysis()
 
-    mock_analyse.return_value = fake_analysis
+    mock_analyse.return_value = (
+        fake_analysis
+    )
+
+    mock_save_analysis.return_value = (
+        "analysis_test.json"
+    )
 
     mock_render.return_value = (
         "Test briefing"
     )
 
-    mock_analysis_file = (
-        tmp_path
-        / "analysis_test.json"
-    )
+    mock_storage = MagicMock()
 
-    mock_save_analysis.return_value = (
-        mock_analysis_file
-    )
-
-    monkeypatch.setattr(
-        scheduled_runner,
-        "LOG_DIR",
-        tmp_path,
-    )
-
-    monkeypatch.setattr(
-        scheduled_runner,
-        "STATUS_FILE",
-        tmp_path / "last_run.json",
+    mock_get_storage_service.return_value = (
+        mock_storage
     )
 
     scheduled_runner.run()
 
-    # Analysis should run once.
     mock_analyse.assert_called_once()
 
-    # Structured result should be persisted once.
     mock_save_analysis.assert_called_once()
 
-    # Briefing must use the same analysis object.
     mock_render.assert_called_once_with(
         fake_analysis
     )
 
-    # User notification should be issued.
     mock_notify.assert_called_once()
 
-    # Status file should exist.
-    status_file = (
-        tmp_path
-        / "last_run.json"
+    # Storage should contain:
+    # - briefing
+    # - last_run status
+    assert (
+        mock_storage.write_text.call_count
+        == 2
     )
 
-    assert status_file.exists()
-
-    status_text = (
-        status_file.read_text(
-            encoding="utf-8"
-        )
+    first_call = (
+        mock_storage
+        .write_text
+        .call_args_list[0]
     )
 
-    assert '"status": "success"' in status_text
-
-    # One briefing should have been created.
-    briefing_files = list(
-        tmp_path.glob(
-            "briefing_*.txt"
-        )
+    briefing_name = (
+        first_call.args[0]
     )
 
-    assert len(briefing_files) == 1
+    briefing_content = (
+        first_call.args[1]
+    )
+
+    assert briefing_name.startswith(
+        "briefing_"
+    )
+
+    assert briefing_name.endswith(
+        ".txt"
+    )
 
     assert (
-        briefing_files[0].read_text(
-            encoding="utf-8"
-        )
+        briefing_content
         == "Test briefing"
     )
 
+    second_call = (
+        mock_storage
+        .write_text
+        .call_args_list[1]
+    )
 
-@patch("app.scheduled_runner.notify")
-@patch("app.scheduled_runner.analyse_daily_context")
+    assert (
+        second_call.args[0]
+        == "last_run.json"
+    )
+
+    status_content = (
+        second_call.args[1]
+    )
+
+    assert '"status": "success"' in (
+        status_content
+    )
+
+    assert (
+        "analysis_test.json"
+        in status_content
+    )
+
+    assert (
+        briefing_name
+        in status_content
+    )
+
+
+@patch(
+    "app.scheduled_runner.notify"
+)
+@patch(
+    "app.scheduled_runner.analyse_daily_context"
+)
+@patch(
+    "app.scheduled_runner.get_storage_service"
+)
 def test_scheduled_runner_failure(
+    mock_get_storage_service,
     mock_analyse,
     mock_notify,
-    tmp_path,
-    monkeypatch,
 ):
-    mock_analyse.side_effect = RuntimeError(
-        "Simulated failure"
+    mock_analyse.side_effect = (
+        RuntimeError(
+            "Simulated failure"
+        )
     )
 
-    monkeypatch.setattr(
-        scheduled_runner,
-        "LOG_DIR",
-        tmp_path,
-    )
+    mock_storage = MagicMock()
 
-    monkeypatch.setattr(
-        scheduled_runner,
-        "STATUS_FILE",
-        tmp_path / "last_run.json",
+    mock_get_storage_service.return_value = (
+        mock_storage
     )
 
     try:
@@ -135,26 +164,32 @@ def test_scheduled_runner_failure(
     except RuntimeError:
         pass
 
-    # Failure notification should occur.
     mock_notify.assert_called_once()
 
-    # Failed run status must still be persisted.
-    status_file = (
-        tmp_path
-        / "last_run.json"
+    mock_storage.write_text\
+        .assert_called_once()
+
+    call = (
+        mock_storage
+        .write_text
+        .call_args
     )
 
-    assert status_file.exists()
-
-    status_text = (
-        status_file.read_text(
-            encoding="utf-8"
-        )
+    assert (
+        call.args[0]
+        == "last_run.json"
     )
 
-    assert '"status": "failed"' in status_text
+    status_content = (
+        call.args[1]
+    )
+
+    assert (
+        '"status": "failed"'
+        in status_content
+    )
 
     assert (
         "Simulated failure"
-        in status_text
+        in status_content
     )

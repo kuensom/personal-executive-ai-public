@@ -1,7 +1,6 @@
 import json
 
 from datetime import datetime
-from pathlib import Path
 
 from app.config import settings
 from app.integrations.ai_client import (
@@ -13,12 +12,12 @@ from app.models import DailyAnalysis
 from app.services.data_collector import (
     collect_daily_context,
 )
+from app.services.storage_service import (
+    get_storage_service,
+)
 
 
 logger = get_logger("ai")
-
-LOG_DIR = settings.log_dir
-USAGE_FILE = LOG_DIR / "latest_usage.json"
 
 
 SYSTEM_INSTRUCTIONS = """
@@ -92,20 +91,10 @@ def build_context_payload(
 def save_usage(
     response,
 ) -> None:
-    """
-    Persist the latest OpenAI token usage.
-
-    If the response does not contain usage data,
-    nothing is written.
-    """
+    """Persist latest OpenAI token usage."""
 
     if not response.usage:
         return
-
-    LOG_DIR.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
 
     usage_data = {
         "model": MODEL,
@@ -120,12 +109,14 @@ def save_usage(
         ),
     }
 
-    USAGE_FILE.write_text(
+    storage = get_storage_service()
+
+    storage.write_text(
+        "latest_usage.json",
         json.dumps(
             usage_data,
             indent=2,
         ),
-        encoding="utf-8",
     )
 
 
@@ -182,56 +173,38 @@ def analyse_daily_context() -> DailyAnalysis:
 
 def save_analysis(
     analysis: DailyAnalysis,
-    output_dir: Path = LOG_DIR,
     run_id: str | None = None,
-) -> Path:
+) -> str:
     """
-    Persist structured DailyAnalysis as JSON.
+    Persist structured DailyAnalysis.
 
-    Args:
-        analysis:
-            Structured DailyAnalysis result.
-
-        output_dir:
-            Directory in which the analysis file
-            will be stored.
-
-        run_id:
-            Optional run identifier. If omitted,
-            a timestamp-based ID is generated.
-
-    Returns:
-        Path to the saved analysis file.
+    Returns the storage-neutral artifact name.
     """
-
-    output_dir.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
 
     if run_id is None:
         run_id = datetime.now().strftime(
             "%Y-%m-%d_%H-%M-%S"
         )
 
-    output_file = (
-        output_dir
-        / f"analysis_{run_id}.json"
+    artifact_name = (
+        f"analysis_{run_id}.json"
     )
 
-    output_file.write_text(
+    storage = get_storage_service()
+
+    storage.write_text(
+        artifact_name,
         analysis.model_dump_json(
             indent=2
         ),
-        encoding="utf-8",
     )
 
     logger.info(
         "Structured analysis saved: %s",
-        output_file,
+        artifact_name,
     )
 
-    return output_file
+    return artifact_name
 
 
 def main():

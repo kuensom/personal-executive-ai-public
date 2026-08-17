@@ -1,63 +1,67 @@
 import json
-from pathlib import Path
-
-from app.models import DashboardViewModel
-
-from app.models import HistoryDetailViewModel
 
 from app.models import (
     DailyAnalysis,
+    DashboardViewModel,
+    HistoryDetailViewModel,
     HistoryItem,
     RunStatus,
     SystemOverview,
     UsageInfo,
 )
+from app.services.storage_service import (
+    get_storage_service,
+)
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-LOG_DIR = BASE_DIR / "logs"
+def read_json_artifact(
+    name: str,
+) -> dict:
+    """Read and decode a JSON artifact."""
 
-STATUS_FILE = LOG_DIR / "last_run.json"
-USAGE_FILE = LOG_DIR / "latest_usage.json"
+    storage = get_storage_service()
 
+    content = storage.read_text(
+        name
+    )
 
-def read_json_file(path: Path) -> dict:
-    """Read and decode a JSON file."""
-
-    if not path.exists():
+    if content is None:
         raise FileNotFoundError(
-            f"File not found: {path.name}"
+            f"Artifact not found: {name}"
         )
 
     return json.loads(
-        path.read_text(
-            encoding="utf-8"
-        )
+        content
     )
 
 
-def get_latest_file(pattern: str) -> Path:
-    """Return the most recently modified file matching a pattern."""
+def get_latest_name(
+    prefix: str,
+    suffix: str,
+) -> str:
+    """Return newest matching artifact name."""
 
-    files = sorted(
-        LOG_DIR.glob(pattern),
-        key=lambda path: path.stat().st_mtime,
-        reverse=True,
+    storage = get_storage_service()
+
+    names = storage.list_names(
+        prefix=prefix,
+        suffix=suffix,
     )
 
-    if not files:
+    if not names:
         raise FileNotFoundError(
-            f"No files found matching {pattern}"
+            "No artifacts found matching "
+            f"{prefix}*{suffix}"
         )
 
-    return files[0]
+    return names[0]
 
 
 def get_run_status() -> RunStatus:
-    """Return the most recent agent run status."""
+    """Return most recent run status."""
 
-    data = read_json_file(
-        STATUS_FILE
+    data = read_json_artifact(
+        "last_run.json"
     )
 
     return RunStatus(
@@ -66,38 +70,45 @@ def get_run_status() -> RunStatus:
 
 
 def get_latest_analysis() -> DailyAnalysis:
-    """Return the latest structured AI analysis."""
+    """Return latest structured analysis."""
 
-    latest_file = get_latest_file(
-        "analysis_*.json"
-    )
-
-    data = read_json_file(
-        latest_file
+    name = get_latest_name(
+        "analysis_",
+        ".json",
     )
 
     return DailyAnalysis(
-        **data
+        **read_json_artifact(name)
     )
 
 
 def get_latest_briefing() -> str:
-    """Return the latest human-readable briefing."""
+    """Return latest human-readable briefing."""
 
-    latest_file = get_latest_file(
-        "briefing_*.txt"
+    storage = get_storage_service()
+
+    name = get_latest_name(
+        "briefing_",
+        ".txt",
     )
 
-    return latest_file.read_text(
-        encoding="utf-8"
+    content = storage.read_text(
+        name
     )
+
+    if content is None:
+        raise FileNotFoundError(
+            f"Artifact not found: {name}"
+        )
+
+    return content
 
 
 def get_latest_usage() -> UsageInfo:
-    """Return the latest OpenAI usage statistics."""
+    """Return latest OpenAI usage statistics."""
 
-    data = read_json_file(
-        USAGE_FILE
+    data = read_json_artifact(
+        "latest_usage.json"
     )
 
     return UsageInfo(
@@ -106,14 +117,14 @@ def get_latest_usage() -> UsageInfo:
 
 
 def extract_run_id(
-    path: Path,
+    name: str,
     prefix: str,
     suffix: str,
 ) -> str:
-    """Extract the run ID from an output filename."""
+    """Extract run ID from an artifact name."""
 
     return (
-        path.name
+        name
         .removeprefix(prefix)
         .removesuffix(suffix)
     )
@@ -122,36 +133,40 @@ def extract_run_id(
 def get_history() -> list[HistoryItem]:
     """Return available historical analysis runs."""
 
-    analysis_files = sorted(
-        LOG_DIR.glob(
-            "analysis_*.json"
-        ),
-        key=lambda path: path.stat().st_mtime,
-        reverse=True,
+    storage = get_storage_service()
+
+    analysis_names = storage.list_names(
+        prefix="analysis_",
+        suffix=".json",
     )
 
-    briefing_files = {
+    briefing_names = (
+        storage.list_names(
+            prefix="briefing_",
+            suffix=".txt",
+        )
+    )
+
+    briefing_by_run = {
         extract_run_id(
-            path,
+            name,
             "briefing_",
             ".txt",
-        ): path
-        for path in LOG_DIR.glob(
-            "briefing_*.txt"
-        )
+        ): name
+        for name in briefing_names
     }
 
     history = []
 
-    for analysis_file in analysis_files:
+    for analysis_name in analysis_names:
         run_id = extract_run_id(
-            analysis_file,
+            analysis_name,
             "analysis_",
             ".json",
         )
 
-        briefing_file = (
-            briefing_files.get(
+        briefing_name = (
+            briefing_by_run.get(
                 run_id
             )
         )
@@ -159,14 +174,8 @@ def get_history() -> list[HistoryItem]:
         history.append(
             HistoryItem(
                 timestamp=run_id,
-                analysis_file=str(
-                    analysis_file
-                ),
-                briefing_file=(
-                    str(briefing_file)
-                    if briefing_file
-                    else None
-                ),
+                analysis_file=analysis_name,
+                briefing_file=briefing_name,
             )
         )
 
@@ -174,22 +183,29 @@ def get_history() -> list[HistoryItem]:
 
 
 def get_system_overview() -> SystemOverview:
-    """Build a consolidated system overview."""
+    """Build consolidated system overview."""
+
+    storage = get_storage_service()
 
     last_run = None
     latest_usage = None
 
-    if STATUS_FILE.exists():
+    if storage.exists(
+        "last_run.json"
+    ):
         last_run = get_run_status()
 
-    if USAGE_FILE.exists():
-        latest_usage = get_latest_usage()
+    if storage.exists(
+        "latest_usage.json"
+    ):
+        latest_usage = (
+            get_latest_usage()
+        )
 
     history_count = len(
-        list(
-            LOG_DIR.glob(
-                "analysis_*.json"
-            )
+        storage.list_names(
+            prefix="analysis_",
+            suffix=".json",
         )
     )
 
@@ -200,10 +216,11 @@ def get_system_overview() -> SystemOverview:
         history_count=history_count,
     )
 
+
 def get_dashboard_view(
     history_limit: int = 5,
 ) -> DashboardViewModel:
-    """Build the presentation model for the dashboard."""
+    """Build presentation model for dashboard."""
 
     last_run = None
     analysis = None
@@ -231,69 +248,83 @@ def get_dashboard_view(
         last_run=last_run,
         analysis=analysis,
         usage=usage,
-        recent_history=history[:history_limit],
+        recent_history=history[
+            :history_limit
+        ],
     )
+
 
 def get_analysis_by_run_id(
     run_id: str,
 ) -> DailyAnalysis:
-    """Return structured analysis for a specific run."""
+    """Return analysis for one run."""
 
-    path = (
-        LOG_DIR
-        / f"analysis_{run_id}.json"
+    name = (
+        f"analysis_{run_id}.json"
     )
-
-    data = read_json_file(path)
 
     return DailyAnalysis(
-        **data
+        **read_json_artifact(name)
     )
+
 
 def get_briefing_by_run_id(
     run_id: str,
 ) -> str:
-    """Return briefing text for a specific run."""
+    """Return briefing for one run."""
 
-    path = (
-        LOG_DIR
-        / f"briefing_{run_id}.txt"
+    storage = get_storage_service()
+
+    name = (
+        f"briefing_{run_id}.txt"
     )
 
-    if not path.exists():
+    content = storage.read_text(
+        name
+    )
+
+    if content is None:
         raise FileNotFoundError(
-            f"Briefing not found for run: {run_id}"
+            "Briefing not found for run: "
+            f"{run_id}"
         )
 
-    return path.read_text(
-        encoding="utf-8"
-    )
+    return content
+
 
 def get_history_detail(
     run_id: str,
 ) -> HistoryDetailViewModel:
-    """Build the history detail view."""
+    """Build historical run detail view."""
 
     analysis = None
     briefing = None
 
     try:
-        analysis = get_analysis_by_run_id(
-            run_id
+        analysis = (
+            get_analysis_by_run_id(
+                run_id
+            )
         )
     except FileNotFoundError:
         pass
 
     try:
-        briefing = get_briefing_by_run_id(
-            run_id
+        briefing = (
+            get_briefing_by_run_id(
+                run_id
+            )
         )
     except FileNotFoundError:
         pass
 
-    if analysis is None and briefing is None:
+    if (
+        analysis is None
+        and briefing is None
+    ):
         raise FileNotFoundError(
-            f"No history found for run: {run_id}"
+            "No history found for run: "
+            f"{run_id}"
         )
 
     return HistoryDetailViewModel(
@@ -301,4 +332,3 @@ def get_history_detail(
         analysis=analysis,
         briefing=briefing,
     )
-
