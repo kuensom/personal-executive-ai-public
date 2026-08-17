@@ -54,6 +54,25 @@ class Settings:
                 str(BASE_DIR / "logs"),
             )
         )
+        self.gcp_project_id = os.getenv(
+            "GCP_PROJECT_ID",
+            "",
+        )
+
+        self.openai_secret_id = os.getenv(
+            "OPENAI_SECRET_ID",
+            "personal-executive-ai-openai-key",
+        )
+
+        self.google_client_secret_id = os.getenv(
+            "GOOGLE_CLIENT_SECRET_ID",
+            "personal-executive-ai-google-client",
+        )
+
+        self.google_token_secret_id = os.getenv(
+            "GOOGLE_TOKEN_SECRET_ID",
+            "personal-executive-ai-google-token",
+        )
 
     @property
     def is_cloud(self) -> bool:

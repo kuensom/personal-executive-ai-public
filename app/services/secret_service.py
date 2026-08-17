@@ -3,6 +3,9 @@ import os
 
 from abc import ABC, abstractmethod
 
+from google.api_core.exceptions import NotFound
+from google.cloud import secretmanager
+
 from app.config import settings
 
 
@@ -144,18 +147,219 @@ _secret_service: SecretService | None = None
 
 def get_secret_service() -> SecretService:
     """
-    Return the configured SecretService.
+    Return the configured secret backend.
 
-    LocalSecretService is currently used for local
-    development.
+    APP_ENV=local
+        -> LocalSecretService
 
-    Environment-based selection will be introduced
-    when GoogleSecretService is implemented.
+    APP_ENV=cloud
+        -> GoogleSecretService
     """
 
     global _secret_service
 
     if _secret_service is None:
-        _secret_service = LocalSecretService()
+        if settings.is_cloud:
+            _secret_service = (
+                GoogleSecretService()
+            )
+        else:
+            _secret_service = (
+                LocalSecretService()
+            )
 
     return _secret_service
+
+class GoogleSecretService(SecretService):
+    """
+    Google Cloud Secret Manager implementation.
+
+    Authentication is provided through Google
+    Application Default Credentials.
+
+    In Cloud Run, this normally resolves to the
+    service account attached to the service.
+    """
+
+    def __init__(
+        self,
+        client=None,
+    ):
+        if not settings.gcp_project_id:
+            raise RuntimeError(
+                "GCP_PROJECT_ID is not configured."
+            )
+
+        self.project_id = (
+            settings.gcp_project_id
+        )
+
+        self.client = (
+            client
+            if client is not None
+            else secretmanager.SecretManagerServiceClient()
+        )
+
+    def _secret_name(
+        self,
+        secret_id: str,
+    ) -> str:
+        """
+        Return the resource name of a secret.
+        """
+
+        return (
+            f"projects/{self.project_id}"
+            f"/secrets/{secret_id}"
+        )
+
+    def _secret_version_name(
+        self,
+        secret_id: str,
+        version: str = "latest",
+    ) -> str:
+        """
+        Return the resource name of a secret version.
+        """
+
+        return (
+            f"{self._secret_name(secret_id)}"
+            f"/versions/{version}"
+        )
+
+    def _access_secret(
+        self,
+        secret_id: str,
+    ) -> str:
+        """
+        Read the latest secret value.
+        """
+
+        response = (
+            self.client.access_secret_version(
+                request={
+                    "name": self._secret_version_name(
+                        secret_id
+                    )
+                }
+            )
+        )
+
+        return (
+            response.payload.data.decode(
+                "utf-8"
+            )
+        )
+
+    def _add_secret_version(
+        self,
+        secret_id: str,
+        value: str,
+    ) -> None:
+        """
+        Add a new version to an existing secret.
+        """
+
+        self.client.add_secret_version(
+            request={
+                "parent": self._secret_name(
+                    secret_id
+                ),
+                "payload": {
+                    "data": value.encode(
+                        "utf-8"
+                    )
+                },
+            }
+        )
+
+    def get_openai_api_key(
+        self,
+    ) -> str:
+        """
+        Return the OpenAI API key.
+        """
+
+        value = self._access_secret(
+            settings.openai_secret_id
+        )
+
+        if not value.strip():
+            raise RuntimeError(
+                "OpenAI API key secret is empty."
+            )
+
+        return value.strip()
+
+    def get_google_client_config(
+        self,
+    ) -> dict:
+        """
+        Return Google OAuth client configuration.
+        """
+
+        raw_value = self._access_secret(
+            settings.google_client_secret_id
+        )
+
+        try:
+            return json.loads(
+                raw_value
+            )
+
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(
+                "Google OAuth client secret "
+                "contains invalid JSON."
+            ) from exc
+
+    def get_google_token_data(
+        self,
+    ) -> dict | None:
+        """
+        Return Google OAuth token data.
+
+        A missing token secret/version is treated as
+        'not authorised yet'.
+
+        Other Secret Manager failures are not hidden.
+        """
+
+        try:
+            raw_value = self._access_secret(
+                settings.google_token_secret_id
+            )
+
+        except NotFound:
+            return None
+
+        if not raw_value.strip():
+            return None
+
+        try:
+            return json.loads(
+                raw_value
+            )
+
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(
+                "Google OAuth token secret "
+                "contains invalid JSON."
+            ) from exc
+
+    def save_google_token_data(
+        self,
+        token_data: dict,
+    ) -> None:
+        """
+        Persist refreshed Google OAuth token data
+        as a new Secret Manager version.
+        """
+
+        self._add_secret_version(
+            settings.google_token_secret_id,
+            json.dumps(
+                token_data,
+                separators=(",", ":"),
+            ),
+        )
