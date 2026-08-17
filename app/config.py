@@ -74,6 +74,11 @@ class Settings:
             "personal-executive-ai-google-token",
         )
 
+        self.gcs_bucket_name = os.getenv(
+            "GCS_BUCKET_NAME",
+            "",
+        )
+
     @property
     def is_cloud(self) -> bool:
         return self.environment.lower() == "cloud"
