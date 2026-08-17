@@ -1,53 +1,63 @@
+import json
 import os
+
 from abc import ABC, abstractmethod
-from pathlib import Path
 
 from app.config import settings
 
 
 class SecretService(ABC):
     """
-    Interface for accessing application secrets.
+    Interface for retrieving and persisting
+    application secrets.
 
-    Application code should depend on this interface
-    rather than directly accessing environment
-    variables or secret files.
+    Application and integration code should not
+    need to know where secrets are physically stored.
     """
 
     @abstractmethod
     def get_openai_api_key(self) -> str:
+        """Return the OpenAI API key."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_google_client_config(self) -> dict:
         """
-        Return the OpenAI API key.
+        Return the Google OAuth client configuration.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def get_google_credentials_file(self) -> Path:
+    def get_google_token_data(self) -> dict | None:
         """
-        Return the Google OAuth client credentials file.
+        Return stored Google OAuth token data.
+
+        Returns None when no token has yet been stored.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def get_google_token_file(self) -> Path:
+    def save_google_token_data(
+        self,
+        token_data: dict,
+    ) -> None:
         """
-        Return the Google OAuth token file.
+        Persist Google OAuth token data.
         """
         raise NotImplementedError
 
 
 class LocalSecretService(SecretService):
     """
-    Local-development secret provider.
+    Secret provider for local development.
 
-    OpenAI:
-        Read from the environment/.env.
+    OpenAI secrets are read from the environment.
 
-    Google:
-        Use local credentials.json and token.json.
+    Google OAuth client configuration and token data
+    are read from and written to local JSON files.
 
-    This preserves the application's existing
-    local-development behaviour.
+    The cloud implementation will use Google
+    Secret Manager instead.
     """
 
     def get_openai_api_key(self) -> str:
@@ -62,7 +72,7 @@ class LocalSecretService(SecretService):
 
         return api_key
 
-    def get_google_credentials_file(self) -> Path:
+    def get_google_client_config(self) -> dict:
         credentials_file = (
             settings.google_credentials_file
         )
@@ -73,10 +83,60 @@ class LocalSecretService(SecretService):
                 f"not found: {credentials_file}"
             )
 
-        return credentials_file
+        try:
+            return json.loads(
+                credentials_file.read_text(
+                    encoding="utf-8"
+                )
+            )
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(
+                "Google OAuth credentials file "
+                "contains invalid JSON."
+            ) from exc
 
-    def get_google_token_file(self) -> Path:
-        return settings.google_token_file
+    def get_google_token_data(
+        self,
+    ) -> dict | None:
+        token_file = (
+            settings.google_token_file
+        )
+
+        if not token_file.exists():
+            return None
+
+        try:
+            return json.loads(
+                token_file.read_text(
+                    encoding="utf-8"
+                )
+            )
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(
+                "Google OAuth token file "
+                "contains invalid JSON."
+            ) from exc
+
+    def save_google_token_data(
+        self,
+        token_data: dict,
+    ) -> None:
+        token_file = (
+            settings.google_token_file
+        )
+
+        token_file.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        token_file.write_text(
+            json.dumps(
+                token_data,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
 
 
 _secret_service: SecretService | None = None
@@ -86,10 +146,11 @@ def get_secret_service() -> SecretService:
     """
     Return the configured SecretService.
 
-    Stage 3.0B currently supports local secrets.
+    LocalSecretService is currently used for local
+    development.
 
-    A Google Secret Manager implementation will
-    be added for cloud deployment.
+    Environment-based selection will be introduced
+    when GoogleSecretService is implemented.
     """
 
     global _secret_service

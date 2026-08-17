@@ -1,4 +1,4 @@
-from pathlib import Path
+import json
 
 import pytest
 
@@ -50,25 +50,45 @@ def test_missing_openai_api_key(
         service.get_openai_api_key()
 
 
-def test_google_token_file_returns_path():
-    service = LocalSecretService()
-
-    token_file = (
-        service.get_google_token_file()
-    )
-
-    assert isinstance(
-        token_file,
-        Path,
-    )
-
-
-def test_google_credentials_file_missing(
+def test_get_google_client_config(
     monkeypatch,
     tmp_path,
 ):
+    credentials_file = (
+        tmp_path / "credentials.json"
+    )
+
+    expected = {
+        "installed": {
+            "client_id": "test-client-id",
+            "client_secret": "test-client-secret",
+        }
+    }
+
+    credentials_file.write_text(
+        json.dumps(expected),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        "app.services.secret_service."
+        "settings.google_credentials_file",
+        credentials_file,
+    )
+
     service = LocalSecretService()
 
+    result = (
+        service.get_google_client_config()
+    )
+
+    assert result == expected
+
+
+def test_missing_google_client_config(
+    monkeypatch,
+    tmp_path,
+):
     missing_file = (
         tmp_path / "credentials.json"
     )
@@ -79,8 +99,68 @@ def test_google_credentials_file_missing(
         missing_file,
     )
 
+    service = LocalSecretService()
+
     with pytest.raises(
         FileNotFoundError,
         match="Google OAuth credentials",
     ):
-        service.get_google_credentials_file()
+        service.get_google_client_config()
+
+
+def test_get_google_token_data_missing(
+    monkeypatch,
+    tmp_path,
+):
+    token_file = (
+        tmp_path / "token.json"
+    )
+
+    monkeypatch.setattr(
+        "app.services.secret_service."
+        "settings.google_token_file",
+        token_file,
+    )
+
+    service = LocalSecretService()
+
+    assert (
+        service.get_google_token_data()
+        is None
+    )
+
+
+def test_save_and_get_google_token_data(
+    monkeypatch,
+    tmp_path,
+):
+    token_file = (
+        tmp_path / "secrets" / "token.json"
+    )
+
+    monkeypatch.setattr(
+        "app.services.secret_service."
+        "settings.google_token_file",
+        token_file,
+    )
+
+    expected = {
+        "token": "fake-access-token",
+        "refresh_token": "fake-refresh-token",
+        "client_id": "test-client-id",
+        "client_secret": "test-client-secret",
+    }
+
+    service = LocalSecretService()
+
+    service.save_google_token_data(
+        expected
+    )
+
+    assert token_file.exists()
+
+    result = (
+        service.get_google_token_data()
+    )
+
+    assert result == expected

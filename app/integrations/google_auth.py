@@ -1,3 +1,5 @@
+import json
+
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import (
@@ -19,29 +21,26 @@ def get_google_credentials() -> Credentials:
     """
     Return valid Google OAuth credentials.
 
-    Secret file locations are obtained through
-    SecretService rather than being hard-coded
-    inside this integration.
+    Credential storage is delegated entirely to
+    SecretService.
+
+    This allows local development to use JSON files
+    while cloud deployment can later use
+    Google Secret Manager.
     """
 
     secret_service = get_secret_service()
 
-    credentials_file = (
-        secret_service.get_google_credentials_file()
-    )
-
-    token_file = (
-        secret_service.get_google_token_file()
+    token_data = (
+        secret_service.get_google_token_data()
     )
 
     creds = None
 
-    if token_file.exists():
-        creds = (
-            Credentials.from_authorized_user_file(
-                token_file,
-                SCOPES,
-            )
+    if token_data:
+        creds = Credentials.from_authorized_user_info(
+            token_data,
+            SCOPES,
         )
 
     if not creds or not creds.valid:
@@ -55,10 +54,15 @@ def get_google_credentials() -> Credentials:
             )
 
         else:
+            client_config = (
+                secret_service
+                .get_google_client_config()
+            )
+
             flow = (
                 InstalledAppFlow
-                .from_client_secrets_file(
-                    credentials_file,
+                .from_client_config(
+                    client_config,
                     SCOPES,
                 )
             )
@@ -67,14 +71,10 @@ def get_google_credentials() -> Credentials:
                 port=0
             )
 
-        token_file.parent.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
+        token_json = creds.to_json()
 
-        token_file.write_text(
-            creds.to_json(),
-            encoding="utf-8",
+        secret_service.save_google_token_data(
+            json.loads(token_json)
         )
 
     return creds
