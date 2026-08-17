@@ -1,40 +1,62 @@
+import platform
 import subprocess
 
+from app.config import settings
+from app.logger import get_logger
 
-def notify(title: str, message: str):
-    """Send a macOS desktop notification."""
 
-    # Escape characters that could break AppleScript strings
-    safe_title = (
-        title
-        .replace("\\", "\\\\")
-        .replace('"', '\\"')
-    )
+logger = get_logger("notification")
 
-    safe_message = (
-        message
-        .replace("\\", "\\\\")
-        .replace('"', '\\"')
-    )
+
+def notify(
+    title: str,
+    message: str,
+) -> None:
+    """
+    Send a local desktop notification when supported.
+
+    Cloud environments do not attempt desktop
+    notifications. The event is written to logs
+    instead.
+    """
+
+    if settings.is_cloud:
+        logger.info(
+            "Notification: %s - %s",
+            title,
+            message,
+        )
+        return
+
+    if platform.system() != "Darwin":
+        logger.info(
+            "Notification skipped on unsupported "
+            "platform: %s - %s",
+            title,
+            message,
+        )
+        return
 
     script = (
-        f'display notification "{safe_message}" '
-        f'with title "{safe_title}"'
+        f'display notification '
+        f'{message!r} '
+        f'with title {title!r}'
     )
 
-    result = subprocess.run(
-        [
-            "osascript",
-            "-e",
-            script,
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        subprocess.run(
+            [
+                "osascript",
+                "-e",
+                script,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
 
-    if result.returncode != 0:
-        print(
-            "Notification warning:",
-            result.stderr.strip(),
+    except Exception as exc:
+        logger.warning(
+            "Desktop notification failed: %s",
+            exc,
         )

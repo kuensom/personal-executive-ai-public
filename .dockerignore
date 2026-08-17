@@ -1,0 +1,10 @@
+.git
+.github
+.venv
+.env
+credentials.json
+token.json
+logs
+__pycache__
+.pytest_cache
+.DS_Store

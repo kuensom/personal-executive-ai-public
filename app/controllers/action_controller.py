@@ -41,3 +41,33 @@ def run_now():
 
     finally:
         _run_lock.release()
+
+@router.post(
+    "/internal/scheduled-run",
+    include_in_schema=False,
+)
+def scheduled_run():
+    """
+    Trigger the same workflow used by manual
+    execution.
+
+    Cloud Scheduler will call this endpoint using
+    authenticated OIDC.
+    """
+
+    if not _run_lock.acquire(
+        blocking=False
+    ):
+        return {
+            "status": "busy"
+        }
+
+    try:
+        run()
+
+        return {
+            "status": "success"
+        }
+
+    finally:
+        _run_lock.release()
