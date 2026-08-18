@@ -78,6 +78,28 @@ class Settings:
             "GCS_BUCKET_NAME",
             "",
         )
+        self.google_web_client_file = Path(
+            os.getenv(
+                "GOOGLE_WEB_CLIENT_FILE",
+                str(
+                    BASE_DIR
+                    / "google-web-client.json"
+                ),
+            )
+        )
+
+        self.google_web_client_secret_id = os.getenv(
+            "GOOGLE_WEB_CLIENT_SECRET_ID",
+            (
+                "personal-executive-ai-"
+                "google-web-client"
+            ),
+        )
+
+        self.google_oauth_redirect_uri = os.getenv(
+            "GOOGLE_OAUTH_REDIRECT_URI",
+            "",
+        )
 
     @property
     def is_cloud(self) -> bool:

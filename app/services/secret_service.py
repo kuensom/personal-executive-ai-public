@@ -31,6 +31,15 @@ class SecretService(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_google_web_client_config(
+        self,
+    ) -> dict:
+        """
+        Return Google Web OAuth client configuration.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def get_google_token_data(self) -> dict | None:
         """
         Return stored Google OAuth token data.
@@ -95,6 +104,37 @@ class LocalSecretService(SecretService):
         except json.JSONDecodeError as exc:
             raise RuntimeError(
                 "Google OAuth credentials file "
+                "contains invalid JSON."
+            ) from exc
+
+    def get_google_web_client_config(
+        self,
+    ) -> dict:
+        """
+        Return Google Web OAuth client configuration
+        from the local JSON file.
+        """
+
+        client_file = (
+            settings.google_web_client_file
+        )
+
+        if not client_file.exists():
+            raise FileNotFoundError(
+                "Google Web OAuth client file "
+                f"not found: {client_file}"
+            )
+
+        try:
+            return json.loads(
+                client_file.read_text(
+                    encoding="utf-8"
+                )
+            )
+
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(
+                "Google Web OAuth client file "
                 "contains invalid JSON."
             ) from exc
 
@@ -310,6 +350,29 @@ class GoogleSecretService(SecretService):
         except json.JSONDecodeError as exc:
             raise RuntimeError(
                 "Google OAuth client secret "
+                "contains invalid JSON."
+            ) from exc
+
+    def get_google_web_client_config(
+        self,
+    ) -> dict:
+        """
+        Return Google Web OAuth client configuration
+        from Google Secret Manager.
+        """
+
+        raw_value = self._access_secret(
+            settings.google_web_client_secret_id
+        )
+
+        try:
+            return json.loads(
+                raw_value
+            )
+
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(
+                "Google Web OAuth client secret "
                 "contains invalid JSON."
             ) from exc
 

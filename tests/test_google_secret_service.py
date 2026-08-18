@@ -264,3 +264,75 @@ def test_missing_project_id(
         GoogleSecretService(
             client=MagicMock()
         )
+
+def test_get_google_web_client_config(
+    monkeypatch,
+):
+    configure_project(
+        monkeypatch
+    )
+
+    monkeypatch.setattr(
+        "app.services.secret_service."
+        "settings.google_web_client_secret_id",
+        "google-web-client",
+    )
+
+    client = MagicMock()
+
+    client.access_secret_version.return_value = (
+        build_payload(
+            (
+                '{"web":'
+                '{"client_id":"abc",'
+                '"client_secret":"xyz"}}'
+            )
+        )
+    )
+
+    service = GoogleSecretService(
+        client=client
+    )
+
+    result = (
+        service
+        .get_google_web_client_config()
+    )
+
+    assert result == {
+        "web": {
+            "client_id": "abc",
+            "client_secret": "xyz",
+        }
+    }
+
+def test_invalid_google_web_client_json(
+    monkeypatch,
+):
+    configure_project(
+        monkeypatch
+    )
+
+    monkeypatch.setattr(
+        "app.services.secret_service."
+        "settings.google_web_client_secret_id",
+        "google-web-client",
+    )
+
+    client = MagicMock()
+
+    client.access_secret_version.return_value = (
+        build_payload(
+            "invalid-json"
+        )
+    )
+
+    service = GoogleSecretService(
+        client=client
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="invalid JSON",
+    ):
+        service.get_google_web_client_config()

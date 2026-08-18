@@ -29,3 +29,12 @@ def test_environment_helpers():
     else:
         assert settings.is_local is True
         assert settings.is_cloud is False
+
+def test_google_web_oauth_settings():
+    assert (
+        settings.google_web_client_file
+    )
+
+    assert (
+        settings.google_web_client_secret_id
+    )

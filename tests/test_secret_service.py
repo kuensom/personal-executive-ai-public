@@ -164,3 +164,73 @@ def test_save_and_get_google_token_data(
     )
 
     assert result == expected
+
+def test_get_google_web_client_config(
+    monkeypatch,
+    tmp_path,
+):
+    web_client_file = (
+        tmp_path
+        / "google-web-client.json"
+    )
+
+    expected = {
+        "web": {
+            "client_id": "test-client-id",
+            "client_secret": (
+                "test-client-secret"
+            ),
+            "redirect_uris": [
+                (
+                    "http://127.0.0.1:8080/"
+                    "admin/google/callback"
+                )
+            ],
+        }
+    }
+
+    web_client_file.write_text(
+        json.dumps(
+            expected
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        "app.services.secret_service."
+        "settings.google_web_client_file",
+        web_client_file,
+    )
+
+    service = LocalSecretService()
+
+    result = (
+        service
+        .get_google_web_client_config()
+    )
+
+    assert result == expected
+
+def test_missing_google_web_client_config(
+    monkeypatch,
+    tmp_path,
+):
+    missing_file = (
+        tmp_path
+        / "google-web-client.json"
+    )
+
+    monkeypatch.setattr(
+        "app.services.secret_service."
+        "settings.google_web_client_file",
+        missing_file,
+    )
+
+    service = LocalSecretService()
+
+    with pytest.raises(
+        FileNotFoundError,
+        match="Google Web OAuth",
+    ):
+        service.get_google_web_client_config()
+
