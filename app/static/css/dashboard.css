@@ -845,3 +845,40 @@ a {
     cursor: not-allowed;
     opacity: 0.5;
 }
+
+.google-account-form {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.google-account-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 280px;
+}
+
+.admin-input {
+    min-height: 42px;
+    padding: 8px 12px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    font: inherit;
+    background: #ffffff;
+}
+
+.admin-message {
+    margin-bottom: 20px;
+    padding: 12px 14px;
+    border-radius: 8px;
+}
+
+.admin-message.success {
+    background: rgba(16, 185, 129, 0.10);
+}
+
+.admin-message.warning {
+    background: rgba(245, 158, 11, 0.12);
+}

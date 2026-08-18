@@ -41,9 +41,51 @@ Connections, configuration and cloud services
 
     <div class="card">
 
+        <!-- OAuth status messages -->
+
+        {% if google_status == "connected" %}
+
+            <div class="admin-message success">
+                Google account connected successfully.
+            </div>
+
+        {% elif google_status == "account_mismatch" %}
+
+            <div class="admin-message warning">
+                The Google account authorized did not match
+                the account requested. The existing connection
+                was not changed.
+            </div>
+
+        {% elif google_status == "invalid_state" %}
+
+            <div class="admin-message warning">
+                The Google authorization session expired or
+                could not be verified. Please try again.
+            </div>
+
+        {% elif google_status == "invalid_email" %}
+
+            <div class="admin-message warning">
+                Please enter a valid Google email address.
+            </div>
+
+        {% elif google_status == "profile_error" %}
+
+            <div class="admin-message warning">
+                The authorized Google account could not be
+                identified.
+            </div>
+
+        {% endif %}
+
+
+        <!-- Current Google connection -->
+
         <div class="admin-grid">
 
             <div class="admin-row">
+
                 <span class="admin-label">
                     Connected account
                 </span>
@@ -51,10 +93,12 @@ Connections, configuration and cloud services
                 <strong>
                     {{ admin.google.email or "Not connected" }}
                 </strong>
+
             </div>
 
 
             <div class="admin-row">
+
                 <span class="admin-label">
                     Connection status
                 </span>
@@ -62,10 +106,12 @@ Connections, configuration and cloud services
                 <span>
                     {{ admin.google.status | upper }}
                 </span>
+
             </div>
 
 
             <div class="admin-row">
+
                 <span class="admin-label">
                     Gmail access
                 </span>
@@ -77,10 +123,12 @@ Connections, configuration and cloud services
                         Unavailable
                     {% endif %}
                 </span>
+
             </div>
 
 
             <div class="admin-row">
+
                 <span class="admin-label">
                     Calendar access
                 </span>
@@ -92,27 +140,94 @@ Connections, configuration and cloud services
                         Unavailable
                     {% endif %}
                 </span>
+
             </div>
+
+
+            {% if admin.google.messages_total is not none %}
+
+                <div class="admin-row">
+
+                    <span class="admin-label">
+                        Gmail messages
+                    </span>
+
+                    <span>
+                        {{ admin.google.messages_total }}
+                    </span>
+
+                </div>
+
+            {% endif %}
+
+
+            {% if admin.google.threads_total is not none %}
+
+                <div class="admin-row">
+
+                    <span class="admin-label">
+                        Gmail threads
+                    </span>
+
+                    <span>
+                        {{ admin.google.threads_total }}
+                    </span>
+
+                </div>
+
+            {% endif %}
 
         </div>
 
+
+        <!-- Google account switcher -->
 
         <div class="admin-actions">
 
-            <button
-                type="button"
-                class="secondary-button"
-                disabled
-                title="Hosted Google account switching will be added next."
+            <form
+                method="get"
+                action="/admin/google/connect"
+                class="google-account-form"
             >
-                Switch Google account
-            </button>
 
-            <span class="muted">
-                OAuth switching will be enabled in the next stage.
-            </span>
+                <div class="google-account-field">
+
+                    <label
+                        for="google-email"
+                        class="admin-label"
+                    >
+                        Account to connect
+                    </label>
+
+                    <input
+                        id="google-email"
+                        name="email"
+                        type="email"
+                        class="admin-input"
+                        placeholder="name@gmail.com"
+                        autocomplete="email"
+                    >
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="secondary-button"
+                >
+                    Switch Google account
+                </button>
+
+            </form>
 
         </div>
+
+
+        <p class="muted">
+            Enter a Google account to connect explicitly,
+            or leave the field blank to choose an account
+            from Google's account selector.
+        </p>
 
     </div>
 
@@ -145,7 +260,11 @@ Connections, configuration and cloud services
                 </span>
 
                 <strong>
-                    {{ admin.openai.status | replace("_", " ") | upper }}
+                    {{
+                        admin.openai.status
+                        | replace("_", " ")
+                        | upper
+                    }}
                 </strong>
 
             </div>
@@ -222,7 +341,74 @@ Connections, configuration and cloud services
                 </span>
 
                 <span>
-                    {{ admin.storage.bucket or "Local filesystem" }}
+                    {{
+                        admin.storage.bucket
+                        or "Local filesystem"
+                    }}
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =========================
+     ENVIRONMENT
+========================= -->
+
+<section class="section">
+
+    <div class="section-heading">
+
+        <h2 class="section-title">
+            Environment
+        </h2>
+
+    </div>
+
+
+    <div class="card">
+
+        <div class="admin-grid">
+
+            <div class="admin-row">
+
+                <span class="admin-label">
+                    Application environment
+                </span>
+
+                <span>
+                    {{ admin.environment | upper }}
+                </span>
+
+            </div>
+
+
+            <div class="admin-row">
+
+                <span class="admin-label">
+                    Secret provider
+                </span>
+
+                <span>
+                    {{ admin.secrets.backend }}
+                </span>
+
+            </div>
+
+
+            <div class="admin-row">
+
+                <span class="admin-label">
+                    Storage provider
+                </span>
+
+                <span>
+                    {{ admin.storage.backend }}
                 </span>
 
             </div>
@@ -260,7 +446,11 @@ Connections, configuration and cloud services
                 </span>
 
                 <span>
-                    Not configured
+                    {% if admin.scheduler.status == "configured" %}
+                        Configured
+                    {% else %}
+                        Not configured
+                    {% endif %}
                 </span>
 
             </div>
@@ -270,7 +460,7 @@ Connections, configuration and cloud services
 
         <p class="muted">
             Cloud Scheduler will be configured after
-            Google account switching is completed.
+            Google account switching is fully validated.
         </p>
 
     </div>
