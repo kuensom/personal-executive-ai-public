@@ -10,6 +10,9 @@ from app.controllers.dashboard_controller import (
     router as dashboard_router,
 )
 
+from app.controllers.action_controller import (
+    router as action_router,
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "app" / "static"
@@ -32,3 +35,4 @@ app.mount(
 
 app.include_router(api_router)
 app.include_router(dashboard_router)
+app.include_router(action_router)

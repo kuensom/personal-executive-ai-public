@@ -20,7 +20,21 @@ Executive Dashboard
 Your latest priorities, insights and agent status
 {% endblock %}
 
+{% block topbar_actions %}
 
+<form
+    method="post"
+    action="/actions/run-now"
+>
+    <button
+        type="submit"
+        class="run-now-button"
+    >
+        Run now
+    </button>
+</form>
+
+{% endblock %}
 {% block content %}
 
 <!-- =========================

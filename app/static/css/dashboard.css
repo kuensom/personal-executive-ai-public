@@ -779,3 +779,24 @@ a {
 
     color: var(--text-secondary);
 }
+
+.run-now-button {
+    appearance: none;
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    background: #111827;
+    color: #ffffff;
+}
+
+.run-now-button:hover {
+    opacity: 0.9;
+}
+
+.run-now-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
