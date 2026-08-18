@@ -13,8 +13,4 @@ RUN pip install \
 
 COPY . .
 
-CMD [
-    "python",
-    "-m",
-    "app.cloud_entrypoint"
-]
+CMD ["python", "-m", "app.cloud_entrypoint"]
