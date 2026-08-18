@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+Administration | Personal Executive AI
+{% endblock %}
+
+
+{% block nav_admin %}
+active
+{% endblock %}
+
+
+{% block page_title %}
+Administration
+{% endblock %}
+
+
+{% block page_description %}
+Connections, configuration and cloud services
+{% endblock %}
+
+
+{% block content %}
+
+
+<!-- =========================
+     GOOGLE ACCOUNT
+========================= -->
+
+<section class="section">
+
+    <div class="section-heading">
+
+        <h2 class="section-title">
+            Google account
+        </h2>
+
+    </div>
+
+
+    <div class="card">
+
+        <div class="admin-grid">
+
+            <div class="admin-row">
+                <span class="admin-label">
+                    Connected account
+                </span>
+
+                <strong>
+                    {{ admin.google.email or "Not connected" }}
+                </strong>
+            </div>
+
+
+            <div class="admin-row">
+                <span class="admin-label">
+                    Connection status
+                </span>
+
+                <span>
+                    {{ admin.google.status | upper }}
+                </span>
+            </div>
+
+
+            <div class="admin-row">
+                <span class="admin-label">
+                    Gmail access
+                </span>
+
+                <span>
+                    {% if admin.google.status == "connected" %}
+                        Connected
+                    {% else %}
+                        Unavailable
+                    {% endif %}
+                </span>
+            </div>
+
+
+            <div class="admin-row">
+                <span class="admin-label">
+                    Calendar access
+                </span>
+
+                <span>
+                    {% if admin.google.status == "connected" %}
+                        Connected
+                    {% else %}
+                        Unavailable
+                    {% endif %}
+                </span>
+            </div>
+
+        </div>
+
+
+        <div class="admin-actions">
+
+            <button
+                type="button"
+                class="secondary-button"
+                disabled
+                title="Hosted Google account switching will be added next."
+            >
+                Switch Google account
+            </button>
+
+            <span class="muted">
+                OAuth switching will be enabled in the next stage.
+            </span>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =========================
+     OPENAI
+========================= -->
+
+<section class="section">
+
+    <div class="section-heading">
+
+        <h2 class="section-title">
+            OpenAI
+        </h2>
+
+    </div>
+
+
+    <div class="card">
+
+        <div class="admin-grid">
+
+            <div class="admin-row">
+
+                <span class="admin-label">
+                    API key
+                </span>
+
+                <strong>
+                    {{ admin.openai.status | replace("_", " ") | upper }}
+                </strong>
+
+            </div>
+
+
+            <div class="admin-row">
+
+                <span class="admin-label">
+                    Model
+                </span>
+
+                <span>
+                    {{ admin.openai.model }}
+                </span>
+
+            </div>
+
+
+            <div class="admin-row">
+
+                <span class="admin-label">
+                    Secret backend
+                </span>
+
+                <span>
+                    {{ admin.secrets.backend }}
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =========================
+     STORAGE
+========================= -->
+
+<section class="section">
+
+    <div class="section-heading">
+
+        <h2 class="section-title">
+            Storage
+        </h2>
+
+    </div>
+
+
+    <div class="card">
+
+        <div class="admin-grid">
+
+            <div class="admin-row">
+
+                <span class="admin-label">
+                    Backend
+                </span>
+
+                <span>
+                    {{ admin.storage.backend }}
+                </span>
+
+            </div>
+
+
+            <div class="admin-row">
+
+                <span class="admin-label">
+                    Bucket
+                </span>
+
+                <span>
+                    {{ admin.storage.bucket or "Local filesystem" }}
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =========================
+     SCHEDULER
+========================= -->
+
+<section class="section">
+
+    <div class="section-heading">
+
+        <h2 class="section-title">
+            Scheduler
+        </h2>
+
+    </div>
+
+
+    <div class="card">
+
+        <div class="admin-grid">
+
+            <div class="admin-row">
+
+                <span class="admin-label">
+                    Morning schedule
+                </span>
+
+                <span>
+                    Not configured
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <p class="muted">
+            Cloud Scheduler will be configured after
+            Google account switching is completed.
+        </p>
+
+    </div>
+
+</section>
+
+
+{% endblock %}
